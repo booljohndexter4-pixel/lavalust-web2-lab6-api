@@ -25,7 +25,7 @@ class ProductController extends Controller
     public function store()
     {
         $this->api->require_method('POST');
-        $this->api->require_jwt();
+        $this->require_admin();
 
         $data = $this->api->body();
         $this->validate_product($data);
@@ -54,7 +54,7 @@ class ProductController extends Controller
         if (!in_array($_SERVER['REQUEST_METHOD'], ['PUT', 'PATCH'], true)) {
             $this->api->respond_error('Method Not Allowed', 405);
         }
-        $this->api->require_jwt();
+        $this->require_admin();
 
         $current = $this->find_product($id);
         if (!$current) {
@@ -86,7 +86,7 @@ class ProductController extends Controller
     public function destroy($id)
     {
         $this->api->require_method('DELETE');
-        $this->api->require_jwt();
+        $this->require_admin();
 
         if (!$this->find_product($id)) {
             $this->api->respond_error('Product not found', 404);
@@ -100,6 +100,14 @@ class ProductController extends Controller
     {
         $stmt = $this->db->raw("SELECT * FROM products WHERE id = ? LIMIT 1", [$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    private function require_admin()
+    {
+        $auth = $this->api->require_jwt();
+        if (($auth['role'] ?? '') !== 'admin') {
+            $this->api->respond_error('Admin access required', 403);
+        }
     }
 
     private function validate_product($data)
